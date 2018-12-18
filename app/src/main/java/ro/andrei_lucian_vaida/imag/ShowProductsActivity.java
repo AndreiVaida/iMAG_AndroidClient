@@ -4,14 +4,13 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 
-import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONObject;
+import org.json.JSONArray;
 
 public class ShowProductsActivity extends AppCompatActivity {
     private final String productsUrl = "/product";
@@ -39,11 +38,11 @@ public class ShowProductsActivity extends AppCompatActivity {
     }
 
     private void loadProducts() {
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, MainActivity.serverUrl + productsUrl,
-                null, new Response.Listener<JSONObject>() {
+        JsonArrayRequest jsonObjectRequest = new JsonArrayRequest(MainActivity.serverUrl + productsUrl,
+                new Response.Listener<JSONArray>() {
 
                     @Override
-                    public void onResponse(JSONObject response) {
+                    public void onResponse(JSONArray response) {
                         title.setText("Response: " + response.toString());
                     }
                 }, new Response.ErrorListener() {
