@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="ro.andrei_lucian_vaida.imag">
+
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -10,7 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true"> <!--// ADD THIS LINE TO BE ABLE TO CONNECT THE DEVICE TO COMPUTER -->
+        android:usesCleartextTraffic="true"> <!-- // ADD THIS LINE TO BE ABLE TO CONNECT THE DEVICE TO COMPUTER -->
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -18,8 +19,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ShowProductsActivity"></activity>
-        <uses-library android:name="org.apache.http.legacy" android:required="false" />
+        <activity android:name=".ShowProductsActivity" />
+
+        <uses-library
+            android:name="org.apache.http.legacy"
+            android:required="false" />
+
+        <activity android:name=".ShowProductDetailsActivity"></activity>
     </application>
 
 </manifest>
