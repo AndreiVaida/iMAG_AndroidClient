@@ -14,8 +14,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
     }
 
-    public void goToShowProducts(View view) {
+    public void goToShowProductsActivity(View view) {
         Intent intent = new Intent(this, ShowProductsActivity.class);
+        startActivity(intent);
+    }
+
+    public void goToLoginActivity(View view) {
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.putExtra("activityType", "LOGIN");
+        startActivity(intent);
+    }
+
+    public void goToRegisterActivity(View view) {
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.putExtra("activityType", "REGISTER");
         startActivity(intent);
     }
 }

@@ -25,7 +25,8 @@
             android:name="org.apache.http.legacy"
             android:required="false" />
 
-        <activity android:name=".ShowProductDetailsActivity"></activity>
+        <activity android:name=".ShowProductDetailsActivity" />
+        <activity android:name=".LoginActivity"></activity>
     </application>
 
 </manifest>

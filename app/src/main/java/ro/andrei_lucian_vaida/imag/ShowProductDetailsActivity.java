@@ -34,7 +34,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
         productDetailsView = findViewById(R.id.productDetailsView);
 
         queue = Volley.newRequestQueue(this);
-        Intent intent = getIntent();
+        final Intent intent = getIntent();
         productId = intent.getIntExtra("productId", -1);
     }
 
