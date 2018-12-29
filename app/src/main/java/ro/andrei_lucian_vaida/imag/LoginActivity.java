@@ -1,9 +1,13 @@
 package ro.andrei_lucian_vaida.imag;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -19,6 +23,7 @@ public class LoginActivity extends AppCompatActivity {
     private final String userUrl = "/user";
     private EditText emailInput;
     private EditText passwordInput;
+    private TextView errorTextView;
     private RequestQueue queue;
 
     @Override
@@ -27,6 +32,7 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
         emailInput = findViewById(R.id.emailInput);
         passwordInput = findViewById(R.id.passwordInput);
+        errorTextView = findViewById(R.id.errorTextView);
         queue = Volley.newRequestQueue(this);
     }
 
@@ -49,7 +55,10 @@ public class LoginActivity extends AppCompatActivity {
                     public void onResponse(JSONObject response) {
                         try {
                             final String token = response.getString("token");
-                            if (token)
+                            final Integer userId = response.getInt("userId");
+                            saveToken(token);
+                            goToWishlistActivity(userId);
+
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -58,10 +67,22 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                productNameView.setText("Produs indisponibil");
-                productDetailsView.setText(error.getMessage());
+                errorTextView.setText("E-mail sau parolă greșită.");
             }
         });
         queue.add(jsonObjectRequest);
+    }
+
+    private void saveToken(final String token) {
+        SharedPreferences prefs = getSharedPreferences("security", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("token", token);
+        editor.commit();
+    }
+
+    private void goToWishlistActivity(final Integer userId) {
+        Intent intent = new Intent(this, WishlistActivity.class);
+        intent.putExtra("userId", userId);
+        startActivity(intent);
     }
 }

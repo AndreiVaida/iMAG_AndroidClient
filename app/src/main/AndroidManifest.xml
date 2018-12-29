@@ -26,7 +26,8 @@
             android:required="false" />
 
         <activity android:name=".ShowProductDetailsActivity" />
-        <activity android:name=".LoginActivity"></activity>
+        <activity android:name=".LoginActivity" />
+        <activity android:name=".WishlistActivity"></activity>
     </application>
 
 </manifest>
