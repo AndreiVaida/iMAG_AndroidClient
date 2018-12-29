@@ -37,6 +37,7 @@ public class WishlistActivity extends AppCompatActivity {
     private LinearLayout productsLayout;
     private TextView title;
     private Integer userId;
+    private String token;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,8 +48,7 @@ public class WishlistActivity extends AppCompatActivity {
         title = findViewById(R.id.title);
         queue = Volley.newRequestQueue(this);
 
-        final Intent intent = getIntent();
-        userId = intent.getIntExtra("userId", -1);
+        getSharedPreferences();
         loadWishlist(userId);
     }
 
@@ -92,7 +92,7 @@ public class WishlistActivity extends AppCompatActivity {
                 HashMap<String, String> headers = new HashMap<>();
                 //headers.put("Content-Type", "application/json");
                 headers.put("userId", userId.toString());
-                headers.put("token", getToken());
+                headers.put("token", token);
                 return headers;
             }
         };
@@ -100,9 +100,10 @@ public class WishlistActivity extends AppCompatActivity {
         queue.add(jsonArrayRequest);
     }
 
-    private String getToken() {
+    private void getSharedPreferences() {
         SharedPreferences prefs = getSharedPreferences("security", Context.MODE_PRIVATE);
-        return prefs.getString("token", "");
+        userId = prefs.getInt("userId", -1);
+        token = prefs.getString("token", "");
     }
 
     private LinearLayout createNewProductLayout(final JSONObject jsonProduct) throws JSONException {

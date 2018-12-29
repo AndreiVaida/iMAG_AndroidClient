@@ -56,8 +56,8 @@ public class LoginActivity extends AppCompatActivity {
                         try {
                             final String token = response.getString("token");
                             final Integer userId = response.getInt("userId");
-                            saveToken(token);
-                            goToWishlistActivity(userId);
+                            saveSharedPreferences(token, userId);
+                            goToWishlistActivity();
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -73,16 +73,16 @@ public class LoginActivity extends AppCompatActivity {
         queue.add(jsonObjectRequest);
     }
 
-    private void saveToken(final String token) {
+    private void saveSharedPreferences(final String token, Integer userId) {
         SharedPreferences prefs = getSharedPreferences("security", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("token", token);
+        editor.putInt("userId", userId);
         editor.commit();
     }
 
-    private void goToWishlistActivity(final Integer userId) {
+    private void goToWishlistActivity() {
         Intent intent = new Intent(this, WishlistActivity.class);
-        intent.putExtra("userId", userId);
         startActivity(intent);
     }
 }

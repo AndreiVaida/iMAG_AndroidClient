@@ -21,13 +21,16 @@ public class MainActivity extends AppCompatActivity {
 
     public void goToLoginActivity(View view) {
         Intent intent = new Intent(this, LoginActivity.class);
-        intent.putExtra("activityType", "LOGIN");
         startActivity(intent);
     }
 
     public void goToRegisterActivity(View view) {
         Intent intent = new Intent(this, LoginActivity.class);
-        intent.putExtra("activityType", "REGISTER");
+        startActivity(intent);
+    }
+
+    public void goToWishlistActivity(View view) {
+        Intent intent = new Intent(this, WishlistActivity.class);
         startActivity(intent);
     }
 }
