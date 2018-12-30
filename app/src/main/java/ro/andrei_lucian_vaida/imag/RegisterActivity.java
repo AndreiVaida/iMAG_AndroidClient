@@ -40,17 +40,17 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     public void register(View view) {
-        final JSONObject userRegisterJson = new JSONObject();
+        final JSONObject body = new JSONObject();
         try {
-            userRegisterJson.put("email", emailInput.getText());
-            userRegisterJson.put("name", nameInput.getText());
-            userRegisterJson.put("password", passwordInput.getText());
+            body.put("email", emailInput.getText());
+            body.put("name", nameInput.getText());
+            body.put("password", passwordInput.getText());
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST,
+        final StringRequest stringRequest = new StringRequest(Request.Method.POST,
                 MainActivity.serverUrl + userUrl + "/register",
                 new Response.Listener<String>() {
                     @Override
@@ -63,9 +63,10 @@ public class RegisterActivity extends AppCompatActivity {
                 errorTextView.setText("Nu s-a creat contul. \n" + error.getMessage());
             }
         }) {
+            // add body
             @Override
             public byte[] getBody() {
-                return userRegisterJson.toString().getBytes();
+                return body.toString().getBytes();
             }
 
             @Override

@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -20,6 +21,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
@@ -36,6 +38,7 @@ public class WishlistActivity extends AppCompatActivity {
     private RequestQueue queue;
     private LinearLayout productsLayout;
     private TextView title;
+    private TextView statusTextView;
     private Integer userId;
     private String token;
 
@@ -46,6 +49,7 @@ public class WishlistActivity extends AppCompatActivity {
 
         productsLayout = findViewById(R.id.productsLayout);
         title = findViewById(R.id.title);
+        statusTextView = findViewById(R.id.statusTextView);
         queue = Volley.newRequestQueue(this);
 
         getSharedPreferences();
@@ -54,6 +58,12 @@ public class WishlistActivity extends AppCompatActivity {
             return;
         }
         loadWishlist(userId);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        statusTextView.setText("");
     }
 
     private void loadWishlist(final Integer userId) {
@@ -93,7 +103,7 @@ public class WishlistActivity extends AppCompatActivity {
             // add header
             @Override
             public Map<String, String> getHeaders() {
-                HashMap<String, String> headers = new HashMap<>();
+                final HashMap<String, String> headers = new HashMap<>();
                 //headers.put("Content-Type", "application/json");
                 headers.put("userId", userId.toString());
                 headers.put("token", token);
@@ -147,12 +157,67 @@ public class WishlistActivity extends AppCompatActivity {
                 }
             }
         });
+
+        final ImageButton removeProductButton = new ImageButton(this);
+        removeProductButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+        final LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.setMargins(0, 5, 0, 5);
+        buttonParams.height = 100;
+        buttonParams.width = 100;
+        removeProductButton.setLayoutParams(buttonParams);
+        removeProductButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    final Integer productId = jsonProduct.getInt("id");
+                    removeProductFromWishlist(productId);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
         // populate the product layout
         productLayout.addView(imageView);
         productLayout.addView(productNameView);
         productLayout.addView(productPriceView);
+        productLayout.addView(removeProductButton);
 
         return productLayout;
+    }
+
+    private void removeProductFromWishlist(final Integer productId) {
+        final StringRequest stringRequest = new StringRequest(Request.Method.DELETE,
+                MainActivity.serverUrl + wishlistUrl,
+                new Response.Listener<String>() {
+
+                    @Override
+                    public void onResponse(String response) {
+                        statusTextView.setText("Produsul a fost eliminat din wishlist.");
+                        statusTextView.setTextColor(Color.rgb(37, 178, 41));
+                        loadWishlist(userId);
+                    }
+                }, new Response.ErrorListener() {
+
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                statusTextView.setText("Produsul nu a putut fi eliminat din wishlist.");
+                statusTextView.setTextColor(Color.rgb(232, 73, 30));
+                error.printStackTrace();
+            }
+        }) {
+            // add header
+            @Override
+            public Map<String, String> getHeaders() {
+                final HashMap<String, String> headers = new HashMap<>();
+                //headers.put("Content-Type", "application/json");
+                headers.put("userId", userId.toString());
+                headers.put("productId", productId.toString());
+                headers.put("token", token);
+                return headers;
+            }
+        };
+        queue.add(stringRequest);
     }
 
     private void goToProductDetailsActivity(Integer productId) {

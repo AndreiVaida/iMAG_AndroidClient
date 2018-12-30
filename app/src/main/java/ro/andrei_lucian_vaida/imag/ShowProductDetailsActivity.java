@@ -1,8 +1,11 @@
 package ro.andrei_lucian_vaida.imag;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
@@ -15,19 +18,27 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ShowProductDetailsActivity extends AppCompatActivity {
     private Integer productId;
     private TextView productNameView;
     private TextView productPriceView;
     private TextView productDetailsView;
+    private TextView addToWishlistTextView;
     private ImageView productImageView;
     private final String productUrl = "/product";
+    private final String wishlistUrl = "/user/wishlist";
     private RequestQueue queue;
+    private Integer userId;
+    private String token;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,16 +48,25 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
         productPriceView = findViewById(R.id.productPriceView);
         productDetailsView = findViewById(R.id.productDetailsView);
         productImageView = findViewById(R.id.productImageView);
+        addToWishlistTextView = findViewById(R.id.addToWishlistTextView);
 
         queue = Volley.newRequestQueue(this);
         final Intent intent = getIntent();
         productId = intent.getIntExtra("productId", -1);
+        getSharedPreferences();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         loadProductDetails(productId);
+        addToWishlistTextView.setTextColor(Color.rgb(0,0,0));
+    }
+
+    private void getSharedPreferences() {
+        SharedPreferences prefs = getSharedPreferences("security", Context.MODE_PRIVATE);
+        userId = prefs.getInt("userId", -1);
+        token = prefs.getString("token", "");
     }
 
     private void loadProductDetails(final Integer productId) {
@@ -88,5 +108,38 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
     public void goToMainActivity(View view) {
         Intent intent = new Intent(this, MainActivity.class);
         startActivity(intent);
+    }
+
+    public void addToWishlist(View view) {
+        final StringRequest stringRequest = new StringRequest(Request.Method.POST,
+                MainActivity.serverUrl + wishlistUrl,
+                new Response.Listener<String>() {
+
+                    @Override
+                    public void onResponse(String response) {
+                        addToWishlistTextView.setText("Adăugat\nîn wishlist !");
+                        addToWishlistTextView.setTextColor(Color.rgb(37, 178, 41));
+                    }
+                }, new Response.ErrorListener() {
+
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                addToWishlistTextView.setText("Nu a fost adăugat\nîn wishlist.");
+                addToWishlistTextView.setTextColor(Color.rgb(232, 73, 30));
+                error.printStackTrace();
+            }
+        }) {
+            // add header
+            @Override
+            public Map<String, String> getHeaders() {
+                final HashMap<String, String> headers = new HashMap<>();
+                //headers.put("Content-Type", "application/json");
+                headers.put("userId", userId.toString());
+                headers.put("productId", productId.toString());
+                headers.put("token", token);
+                return headers;
+            }
+        };
+        queue.add(stringRequest);
     }
 }
