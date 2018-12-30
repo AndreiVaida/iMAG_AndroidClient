@@ -53,7 +53,7 @@ public class WishlistActivity extends AppCompatActivity {
     }
 
     private void loadWishlist(final Integer userId) {
-        final JsonObjectRequest jsonArrayRequest = new JsonObjectRequest(Request.Method.GET,
+        final JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET,
                 MainActivity.serverUrl + wishlistUrl,
                 null,
                 new Response.Listener<JSONObject>() {
@@ -97,7 +97,7 @@ public class WishlistActivity extends AppCompatActivity {
             }
         };
 
-        queue.add(jsonArrayRequest);
+        queue.add(jsonObjectRequest);
     }
 
     private void getSharedPreferences() {

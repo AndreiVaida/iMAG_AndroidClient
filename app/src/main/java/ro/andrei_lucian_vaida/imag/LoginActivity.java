@@ -37,10 +37,10 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void login(View view) {
-        final JSONObject userLoginJson = new JSONObject();
+        final JSONObject body = new JSONObject();
         try {
-            userLoginJson.put("email", emailInput.getText());
-            userLoginJson.put("password", passwordInput.getText());
+            body.put("email", emailInput.getText());
+            body.put("password", passwordInput.getText());
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -48,7 +48,7 @@ public class LoginActivity extends AppCompatActivity {
 
         final JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
                 MainActivity.serverUrl + userUrl + "/login",
-                userLoginJson,
+                body,
                 new Response.Listener<JSONObject>() {
 
                     @Override

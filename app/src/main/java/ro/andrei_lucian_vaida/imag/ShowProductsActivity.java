@@ -7,19 +7,25 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
 
 import static android.view.Gravity.CENTER_VERTICAL;
 
@@ -27,7 +33,11 @@ public class ShowProductsActivity extends AppCompatActivity {
     private final String productsUrl = "/product";
     private RequestQueue queue;
     private TextView title;
+    private ScrollView productsScrollView;
     private LinearLayout productsLayout;
+    private Integer pageNumber;
+    private Integer totalPages;
+    private Integer itemsPerPage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,8 +45,26 @@ public class ShowProductsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_show_products);
         // initialize components from XML
         title = findViewById(R.id.title);
-        productsLayout = findViewById(R.id.productslayout);
+        productsScrollView = findViewById(R.id.productsScrollView);
+        productsLayout = findViewById(R.id.productsLayout);
         queue = Volley.newRequestQueue(this);
+        pageNumber = 1;
+        totalPages = 1;
+        itemsPerPage = 10;
+
+        // add scroll view listener
+        productsScrollView.getViewTreeObserver()
+                .addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+                    @Override
+                    public void onScrollChanged() {
+                        if (productsScrollView.getChildAt(0).getBottom() <= (productsScrollView.getHeight() + productsScrollView.getScrollY())) {
+                            if (pageNumber < totalPages) {
+                                pageNumber++;
+                                loadProducts();
+                            }
+                        }
+                    }
+                });
     }
 
     @Override
@@ -52,17 +80,21 @@ public class ShowProductsActivity extends AppCompatActivity {
     }
 
     private void loadProducts() {
-        final JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(MainActivity.serverUrl + productsUrl,
-                new Response.Listener<JSONArray>() {
+        final JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET,
+                MainActivity.serverUrl + productsUrl + "?pageNumber=" + pageNumber.toString() + "&itemsPerPage=" + itemsPerPage.toString(),
+                null,
+                new Response.Listener<JSONObject>() {
 
                     @Override
-                    public void onResponse(JSONArray response) {
-                        productsLayout.removeAllViews();
+                    public void onResponse(JSONObject jsonProductPage) {
+                        //productsLayout.removeAllViews();
+                        try {
+                            final JSONArray jsonProductArray = jsonProductPage.getJSONArray("content");
+                            totalPages = jsonProductPage.getInt("totalPages");
 
-                        for (int i = 0; i < response.length(); i++) {
-                            try {
+                            for (int i = 0; i < jsonProductArray.length(); i++) {
                                 // get JSON product
-                                final JSONObject jsonProduct = response.getJSONObject(i);
+                                final JSONObject jsonProduct = jsonProductArray.getJSONObject(i);
 
                                 // create a new layout for the product
                                 final LinearLayout productLayout = createNewProductLayout(jsonProduct);
@@ -70,20 +102,21 @@ public class ShowProductsActivity extends AppCompatActivity {
                                 // add the product view to the page
                                 productsLayout.addView(productLayout);
 
-                            } catch (JSONException e) {
-                                e.printStackTrace();
+
                             }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
                     }
                 }, new Response.ErrorListener() {
 
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        title.setText("Error: " + error.toString());
-                    }
-                });
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                title.setText("Error: " + error.toString());
+            }
+        });
 
-        queue.add(jsonArrayRequest);
+        queue.add(jsonObjectRequest);
     }
 
     private LinearLayout createNewProductLayout(final JSONObject jsonProduct) throws JSONException {
@@ -109,7 +142,7 @@ public class ShowProductsActivity extends AppCompatActivity {
         productLayout.setGravity(CENTER_VERTICAL);
         final LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         layoutParams.setMargins(0, 5, 0, 5);
-        layoutParams.height = 100;
+        layoutParams.height = 110;
         productLayout.setLayoutParams(layoutParams);
         productLayout.setOrientation(LinearLayout.HORIZONTAL);
         productLayout.setOnClickListener(new View.OnClickListener() {
@@ -118,8 +151,7 @@ public class ShowProductsActivity extends AppCompatActivity {
                 try {
                     final Integer productId = jsonProduct.getInt("id");
                     goToProductDetailsActivity(productId);
-                }
-                catch (JSONException e) {
+                } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }

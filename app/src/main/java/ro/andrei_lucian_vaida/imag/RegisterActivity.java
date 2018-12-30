@@ -7,11 +7,13 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONException;
@@ -48,23 +50,31 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
 
-        final JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
+        StringRequest stringRequest = new StringRequest(Request.Method.POST,
                 MainActivity.serverUrl + userUrl + "/register",
-                userRegisterJson,
-                new Response.Listener<JSONObject>() {
-
+                new Response.Listener<String>() {
                     @Override
-                    public void onResponse(JSONObject response) {
+                    public void onResponse(String response) {
                         goToLoginActivity();
                     }
                 }, new Response.ErrorListener() {
-
             @Override
             public void onErrorResponse(VolleyError error) {
                 errorTextView.setText("Nu s-a creat contul. \n" + error.getMessage());
             }
-        });
-        queue.add(jsonObjectRequest);
+        }) {
+            @Override
+            public byte[] getBody() {
+                return userRegisterJson.toString().getBytes();
+            }
+
+            @Override
+            public String getBodyContentType() {
+                return "application/json";
+            }
+        };
+
+        queue.add(stringRequest);
     }
 
     private void goToLoginActivity() {
