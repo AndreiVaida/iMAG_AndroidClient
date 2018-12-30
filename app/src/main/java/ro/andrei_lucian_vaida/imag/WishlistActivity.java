@@ -14,12 +14,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
@@ -86,7 +84,7 @@ public class WishlistActivity extends AppCompatActivity {
                                 // create a new layout for the product
                                 final LinearLayout productLayout = createNewProductLayout(jsonProduct);
 
-                                // add the product view to the page
+                                // save the product view to the page
                                 productsLayout.addView(productLayout);
                             }
                         } catch (JSONException e) {
@@ -100,7 +98,7 @@ public class WishlistActivity extends AppCompatActivity {
                 title.setText("Error: " + error.toString());
             }
         }) {
-            // add header
+            // save header
             @Override
             public Map<String, String> getHeaders() {
                 final HashMap<String, String> headers = new HashMap<>();
@@ -206,7 +204,7 @@ public class WishlistActivity extends AppCompatActivity {
                 error.printStackTrace();
             }
         }) {
-            // add header
+            // save header
             @Override
             public Map<String, String> getHeaders() {
                 final HashMap<String, String> headers = new HashMap<>();

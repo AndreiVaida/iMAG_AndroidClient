@@ -1,10 +1,13 @@
 package ro.andrei_lucian_vaida.imag;
 
+import android.arch.persistence.room.Room;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -17,7 +20,6 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -25,12 +27,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.UnsupportedEncodingException;
+import java.util.List;
+
+import dao.IMagDatabase;
+import domain.Product;
 
 import static android.view.Gravity.CENTER_VERTICAL;
 
 public class ShowProductsActivity extends AppCompatActivity {
     private final String productsUrl = "/product";
+    private static final String DATABASE_NAME = "iMag_db";
+    private IMagDatabase IMagDatabase;
     private RequestQueue queue;
     private TextView title;
     private ScrollView productsScrollView;
@@ -54,7 +61,7 @@ public class ShowProductsActivity extends AppCompatActivity {
         totalPages = 1;
         itemsPerPage = 10;
 
-        // add scroll view listener
+        // save scroll view listener
         productsScrollView.getViewTreeObserver()
                 .addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
                     @Override
@@ -68,11 +75,21 @@ public class ShowProductsActivity extends AppCompatActivity {
                     }
                 });
         productsAreLoaded = false;
+
+
+        IMagDatabase = Room.databaseBuilder(getApplicationContext(),
+                IMagDatabase.class, DATABASE_NAME)
+                .fallbackToDestructiveMigration()
+                .build();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+
+        title.setText("Produse");
+        title.setTextColor(Color.rgb(0, 0, 0));
+
         if (!productsAreLoaded) {
             loadProducts();
         }
@@ -93,6 +110,13 @@ public class ShowProductsActivity extends AppCompatActivity {
 
                     @Override
                     public void onResponse(JSONObject jsonProductPage) {
+                        // clear local storage
+                        if (pageNumber == 1) {
+                            clearLocalStorage();
+                        }
+
+                        title.setText("Produse");
+                        title.setTextColor(Color.rgb(0, 0, 0));
                         //productsLayout.removeAllViews();
                         try {
                             final JSONArray jsonProductArray = jsonProductPage.getJSONArray("content");
@@ -102,13 +126,15 @@ public class ShowProductsActivity extends AppCompatActivity {
                                 // get JSON product
                                 final JSONObject jsonProduct = jsonProductArray.getJSONObject(i);
 
-                                // create a new layout for the product
-                                final LinearLayout productLayout = createNewProductLayout(jsonProduct);
+                                // save the product in local storage
+                                final Product product = saveInLocalStorage(jsonProduct);
 
-                                // add the product view to the page
-                                productsLayout.addView(productLayout);
-
-
+                                if (product != null) {
+                                    // create a new layout for the product
+                                    final LinearLayout productLayout = createNewProductLayout(product);
+                                    // save the product view to the page
+                                    productsLayout.addView(productLayout);
+                                }
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -118,25 +144,88 @@ public class ShowProductsActivity extends AppCompatActivity {
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                title.setText("Error: " + error.toString());
+                title.setText("Conexiune eșuată.\nSe afișează produsele salvate local.");
+                title.setTextColor(Color.rgb(232, 73, 30));
+                if (pageNumber == 1) {
+                    loadProductsFromLocalStorage();
+                }
             }
         });
 
         queue.add(jsonObjectRequest);
     }
 
-    private LinearLayout createNewProductLayout(final JSONObject jsonProduct) throws JSONException {
+    private void clearLocalStorage() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IMagDatabase.productDao().deleteAllNotInWishlist();
+            }
+        }).start();
+    }
+
+    private Product saveInLocalStorage(final JSONObject jsonProduct) {
+        try {
+            final Integer id = jsonProduct.getInt("id");
+            final String name = jsonProduct.getString("name");
+            final Integer price = jsonProduct.getInt("price");
+            final String details = jsonProduct.getString("details");
+            final String image = jsonProduct.getString("image");
+            final Product product = new Product(id, name, price, details, image);
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    IMagDatabase.productDao().save(product);
+                }
+            }).start();
+
+            return product;
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void loadProductsFromLocalStorage() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final List<Product> products = IMagDatabase.productDao().getAll();
+                for (Product product : products) {
+                    // create a new layout for the product
+                    final LinearLayout productLayout = createNewProductLayout(product);
+
+                    // save the product view to the page
+                    final Handler handler = new Handler(Looper.getMainLooper());
+                    final Runnable runnable = new Runnable() {
+                        public void run() {
+                            handler.post(new Runnable() {
+                                public void run() {
+                                    productsLayout.addView(productLayout);
+                                }
+                            });
+                        }
+                    };
+                    new Thread(runnable).start();
+                }
+            }
+        }).start();
+    }
+
+    private LinearLayout createNewProductLayout(final Product product) {
         // image
-        final byte[] byteArray = jsonProduct.getString("image").getBytes();
+        final byte[] byteArray = product.getImage().getBytes();
         final Bitmap bmp = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
         final ImageView imageView = new ImageView(ShowProductsActivity.this);
         imageView.setImageBitmap(bmp);
         // name
         final TextView productNameView = new TextView(ShowProductsActivity.this);
-        productNameView.setText("Denumire: " + jsonProduct.getString("name"));
+        productNameView.setText("Denumire: " + product.getName());
         // price
         final TextView productPriceView = new TextView(ShowProductsActivity.this);
-        productPriceView.setText("Preț: " + jsonProduct.getString("price"));
+        productPriceView.setText("Preț: " + product.getPrice());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.setMargins(200, 0, 0, 0);
         productPriceView.setLayoutParams(params);
@@ -154,12 +243,8 @@ public class ShowProductsActivity extends AppCompatActivity {
         productLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    final Integer productId = jsonProduct.getInt("id");
-                    goToProductDetailsActivity(productId);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                final Integer productId = product.getId();
+                goToProductDetailsActivity(productId);
             }
         });
         // populate the product layout

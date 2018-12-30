@@ -63,7 +63,7 @@ public class RegisterActivity extends AppCompatActivity {
                 errorTextView.setText("Nu s-a creat contul. \n" + error.getMessage());
             }
         }) {
-            // add body
+            // save body
             @Override
             public byte[] getBody() {
                 return body.toString().getBytes();

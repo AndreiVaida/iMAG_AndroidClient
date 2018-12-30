@@ -129,7 +129,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
                 error.printStackTrace();
             }
         }) {
-            // add header
+            // save header
             @Override
             public Map<String, String> getHeaders() {
                 final HashMap<String, String> headers = new HashMap<>();
