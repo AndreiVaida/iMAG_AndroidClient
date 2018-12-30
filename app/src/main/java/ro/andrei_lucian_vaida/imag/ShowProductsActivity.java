@@ -131,4 +131,9 @@ public class ShowProductsActivity extends AppCompatActivity {
 
         return productLayout;
     }
+
+    public void goToMainActivity(View view) {
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+    }
 }

@@ -3,6 +3,7 @@ package ro.andrei_lucian_vaida.imag;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -67,5 +68,10 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
                     }
                 });
         queue.add(jsonObjectRequest);
+    }
+
+    public void goToMainActivity(View view) {
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
     }
 }
