@@ -38,6 +38,7 @@ public class ShowProductsActivity extends AppCompatActivity {
     private Integer pageNumber;
     private Integer totalPages;
     private Integer itemsPerPage;
+    private boolean productsAreLoaded;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +48,7 @@ public class ShowProductsActivity extends AppCompatActivity {
         title = findViewById(R.id.title);
         productsScrollView = findViewById(R.id.productsScrollView);
         productsLayout = findViewById(R.id.productsLayout);
+        productsLayout.removeAllViews();
         queue = Volley.newRequestQueue(this);
         pageNumber = 1;
         totalPages = 1;
@@ -65,12 +67,16 @@ public class ShowProductsActivity extends AppCompatActivity {
                         }
                     }
                 });
+        productsAreLoaded = false;
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        loadProducts();
+        if (!productsAreLoaded) {
+            loadProducts();
+        }
+        productsAreLoaded = true;
     }
 
     private void goToProductDetailsActivity(Integer productId) {

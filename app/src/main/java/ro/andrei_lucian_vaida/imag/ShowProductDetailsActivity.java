@@ -1,9 +1,13 @@
 package ro.andrei_lucian_vaida.imag;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -21,6 +25,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
     private TextView productNameView;
     private TextView productPriceView;
     private TextView productDetailsView;
+    private ImageView productImageView;
     private final String productUrl = "/product";
     private RequestQueue queue;
 
@@ -31,6 +36,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
         productNameView = findViewById(R.id.productNameView);
         productPriceView = findViewById(R.id.productPriceView);
         productDetailsView = findViewById(R.id.productDetailsView);
+        productImageView = findViewById(R.id.productImageView);
 
         queue = Volley.newRequestQueue(this);
         final Intent intent = getIntent();
@@ -55,6 +61,15 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
                             productNameView.setText(response.getString("name"));
                             productPriceView.setText(response.getString("price") + " lei");
                             productDetailsView.setText(response.getString("details"));
+
+                            if (response.has("image")) {
+                                final byte[] imageByteArray = Base64.decode(response.getString("image"), Base64.DEFAULT);
+                                final Bitmap bmp = BitmapFactory.decodeByteArray(imageByteArray, 0, imageByteArray.length);
+                                if (bmp != null) {
+                                    productImageView.setImageBitmap(Bitmap.createScaledBitmap(bmp, productImageView.getWidth(), productImageView.getHeight(), false));
+                                }
+                            }
+
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
