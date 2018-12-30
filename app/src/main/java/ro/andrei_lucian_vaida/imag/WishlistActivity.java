@@ -1,11 +1,14 @@
 package ro.andrei_lucian_vaida.imag;
 
+import android.arch.persistence.room.Room;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -14,9 +17,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.volley.NoConnectionError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
+import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
@@ -26,16 +31,25 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.ConnectException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import dao.IMagDatabase;
+import domain.Product;
+import domain.TaskToDoWhenOnline;
 
 import static android.view.Gravity.CENTER_VERTICAL;
 
 public class WishlistActivity extends AppCompatActivity {
     private final String wishlistUrl = "/user/wishlist";
+    private static final String DATABASE_NAME = "iMag_db";
+    private dao.IMagDatabase IMagDatabase;
+    private boolean weAreOnline;
     private RequestQueue queue;
     private LinearLayout productsLayout;
-    private TextView title;
+    private TextView titleView;
     private TextView statusTextView;
     private Integer userId;
     private String token;
@@ -46,7 +60,7 @@ public class WishlistActivity extends AppCompatActivity {
         setContentView(R.layout.activity_wishlist);
 
         productsLayout = findViewById(R.id.productsLayout);
-        title = findViewById(R.id.title);
+        titleView = findViewById(R.id.titleView);
         statusTextView = findViewById(R.id.statusTextView);
         queue = Volley.newRequestQueue(this);
 
@@ -55,13 +69,23 @@ public class WishlistActivity extends AppCompatActivity {
             goToLoginActivity();
             return;
         }
-        loadWishlist(userId);
+
+        IMagDatabase = Room.databaseBuilder(getApplicationContext(),
+                IMagDatabase.class, DATABASE_NAME)
+                .fallbackToDestructiveMigration()
+                .build();
+
+        weAreOnline = true;
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         statusTextView.setText("");
+
+        if (weAreOnline) {
+            loadWishlist(userId);
+        }
     }
 
     private void loadWishlist(final Integer userId) {
@@ -72,6 +96,7 @@ public class WishlistActivity extends AppCompatActivity {
 
                     @Override
                     public void onResponse(JSONObject response) {
+                        weAreOnline = true;
                         try {
                             JSONArray jsonProducts = response.getJSONArray("productDtos");
                             productsLayout.removeAllViews();
@@ -81,11 +106,16 @@ public class WishlistActivity extends AppCompatActivity {
                                 // get JSON product
                                 final JSONObject jsonProduct = jsonProducts.getJSONObject(i);
 
-                                // create a new layout for the product
-                                final LinearLayout productLayout = createNewProductLayout(jsonProduct);
+                                // save the product in local storage
+                                final Product product = jsonToProduct(jsonProduct, true);
+                                if (product != null) {
+                                    saveInLocalStorage(product);
 
-                                // save the product view to the page
-                                productsLayout.addView(productLayout);
+                                    // create a new layout for the product
+                                    final LinearLayout productLayout = createNewProductLayout(product);
+                                    // save the product view to the page
+                                    productsLayout.addView(productLayout);
+                                }
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -95,7 +125,10 @@ public class WishlistActivity extends AppCompatActivity {
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                title.setText("Error: " + error.toString());
+                weAreOnline = false;
+                titleView.setText("Conexiune eșuată.\nSe afișează produsele salvate local.");
+                titleView.setTextColor(Color.rgb(232, 73, 30));
+                loadWishlistFromLocalStorage();
             }
         }) {
             // save header
@@ -112,24 +145,52 @@ public class WishlistActivity extends AppCompatActivity {
         queue.add(jsonObjectRequest);
     }
 
+    private void loadWishlistFromLocalStorage() {
+        productsLayout.removeAllViews();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final List<Product> products = IMagDatabase.productDao().getAllInWishlist();
+                for (Product product : products) {
+                    // create a new layout for the product
+                    final LinearLayout productLayout = createNewProductLayout(product);
+
+                    // save the product view to the page
+                    final Handler handler = new Handler(Looper.getMainLooper());
+                    final Runnable runnable = new Runnable() {
+                        public void run() {
+                            handler.post(new Runnable() {
+                                public void run() {
+                                    productsLayout.addView(productLayout);
+                                }
+                            });
+                        }
+                    };
+                    new Thread(runnable).start();
+                }
+            }
+        }).start();
+    }
+
     private void getSharedPreferences() {
         SharedPreferences prefs = getSharedPreferences("security", Context.MODE_PRIVATE);
         userId = prefs.getInt("userId", -1);
         token = prefs.getString("token", "");
     }
 
-    private LinearLayout createNewProductLayout(final JSONObject jsonProduct) throws JSONException {
+    private LinearLayout createNewProductLayout(final Product product) {
         // image
-        final byte[] byteArray = jsonProduct.getString("image").getBytes();
+        final byte[] byteArray = product.getImage().getBytes();
         final Bitmap bmp = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
         final ImageView imageView = new ImageView(WishlistActivity.this);
         imageView.setImageBitmap(bmp);
         // name
         final TextView productNameView = new TextView(WishlistActivity.this);
-        productNameView.setText("Denumire: " + jsonProduct.getString("name"));
+        productNameView.setText("Denumire: " + product.getName());
         // price
         final TextView productPriceView = new TextView(WishlistActivity.this);
-        productPriceView.setText("Preț: " + jsonProduct.getString("price"));
+        productPriceView.setText("Preț: " + product.getPrice());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         params.setMargins(200, 0, 0, 0);
         productPriceView.setLayoutParams(params);
@@ -147,12 +208,8 @@ public class WishlistActivity extends AppCompatActivity {
         productLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    final Integer productId = jsonProduct.getInt("id");
-                    goToProductDetailsActivity(productId);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                final Integer productId = product.getId();
+                goToProductDetailsActivity(productId);
             }
         });
 
@@ -166,12 +223,7 @@ public class WishlistActivity extends AppCompatActivity {
         removeProductButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    final Integer productId = jsonProduct.getInt("id");
-                    removeProductFromWishlist(productId);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                removeProductFromWishlist(product);
             }
         });
 
@@ -184,7 +236,12 @@ public class WishlistActivity extends AppCompatActivity {
         return productLayout;
     }
 
-    private void removeProductFromWishlist(final Integer productId) {
+    private void removeProductFromWishlist(final Product product) {
+        if (!weAreOnline) {
+            removeProductFromWishlistOffline(product);
+            return;
+        }
+
         final StringRequest stringRequest = new StringRequest(Request.Method.DELETE,
                 MainActivity.serverUrl + wishlistUrl,
                 new Response.Listener<String>() {
@@ -193,15 +250,26 @@ public class WishlistActivity extends AppCompatActivity {
                     public void onResponse(String response) {
                         statusTextView.setText("Produsul a fost eliminat din wishlist.");
                         statusTextView.setTextColor(Color.rgb(37, 178, 41));
+
+                        product.setInWishlist(false);
+                        saveInLocalStorage(product);
+
                         loadWishlist(userId);
                     }
                 }, new Response.ErrorListener() {
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                statusTextView.setText("Produsul nu a putut fi eliminat din wishlist.");
-                statusTextView.setTextColor(Color.rgb(232, 73, 30));
-                error.printStackTrace();
+                if (error instanceof TimeoutError  || error instanceof NoConnectionError) {
+                    statusTextView.setText("Produsul va fi șters complet după restabilirea conexiunii.");
+                    statusTextView.setTextColor(Color.rgb(208, 219, 61));
+                    removeProductFromWishlistOffline(product);
+                }
+                else {
+                    statusTextView.setText("Produsul nu a putut fi eliminat din wishlist.");
+                    statusTextView.setTextColor(Color.rgb(232, 73, 30));
+                    error.printStackTrace();
+                }
             }
         }) {
             // save header
@@ -210,12 +278,37 @@ public class WishlistActivity extends AppCompatActivity {
                 final HashMap<String, String> headers = new HashMap<>();
                 //headers.put("Content-Type", "application/json");
                 headers.put("userId", userId.toString());
-                headers.put("productId", productId.toString());
+                headers.put("productId", product.getId().toString());
                 headers.put("token", token);
                 return headers;
             }
         };
         queue.add(stringRequest);
+    }
+
+    private void removeProductFromWishlistOffline(final Product product) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                product.setInWishlist(false);
+                IMagDatabase.productDao().save(product);
+                final TaskToDoWhenOnline taskToDoWhenOnline = new TaskToDoWhenOnline(product.getId(), false);
+                IMagDatabase.taskToDoWhenOnlineDao().save(taskToDoWhenOnline);
+
+                final Handler handler = new Handler(Looper.getMainLooper());
+                final Runnable runnable = new Runnable() {
+                    public void run() {
+                        handler.post(new Runnable() {
+                            public void run() {
+                                loadWishlistFromLocalStorage();
+                            }
+                        });
+                    }
+                };
+                new Thread(runnable).start();
+
+            }
+        }).start();
     }
 
     private void goToProductDetailsActivity(Integer productId) {
@@ -236,5 +329,31 @@ public class WishlistActivity extends AppCompatActivity {
     public void goToLoginActivity() {
         Intent intent = new Intent(this, LoginActivity.class);
         startActivity(intent);
+    }
+
+    private Product jsonToProduct(final JSONObject jsonProduct, final boolean isInWishlist) {
+        try {
+            final Integer id = jsonProduct.getInt("id");
+            final String name = jsonProduct.getString("name");
+            final Integer price = jsonProduct.getInt("price");
+            final String details = jsonProduct.getString("details");
+            final String image = jsonProduct.getString("image");
+            final Product product = new Product(id, name, price, details, image);
+            product.setInWishlist(isInWishlist);
+            return product;
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void saveInLocalStorage(final Product product) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IMagDatabase.productDao().save(product);
+            }
+        }).start();
     }
 }

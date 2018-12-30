@@ -30,4 +30,6 @@ public interface ProductDao {
     @Query("DELETE FROM Product WHERE isInWishlist = 0")
     void deleteAllNotInWishlist();
 
+    @Query("SELECT * FROM Product WHERE isInWishlist = 1")
+    List<Product> getAllInWishlist();
 }

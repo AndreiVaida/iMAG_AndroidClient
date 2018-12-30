@@ -87,9 +87,6 @@ public class ShowProductsActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        title.setText("Produse");
-        title.setTextColor(Color.rgb(0, 0, 0));
-
         if (!productsAreLoaded) {
             loadProducts();
         }
