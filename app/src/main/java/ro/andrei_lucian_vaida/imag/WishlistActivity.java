@@ -49,6 +49,10 @@ public class WishlistActivity extends AppCompatActivity {
         queue = Volley.newRequestQueue(this);
 
         getSharedPreferences();
+        if (userId < 0 || token.length() == 0) {
+            goToLoginActivity();
+            return;
+        }
         loadWishlist(userId);
     }
 
@@ -158,7 +162,16 @@ public class WishlistActivity extends AppCompatActivity {
     }
 
     public void goToMainActivity(View view) {
+        goToMainActivity();
+    }
+
+    public void goToMainActivity() {
         Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+    }
+
+    public void goToLoginActivity() {
+        Intent intent = new Intent(this, LoginActivity.class);
         startActivity(intent);
     }
 }
