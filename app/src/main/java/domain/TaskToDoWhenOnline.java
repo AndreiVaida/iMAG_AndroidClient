@@ -15,7 +15,6 @@ public class TaskToDoWhenOnline {
     private boolean isInWishlist;
 
     public TaskToDoWhenOnline(Integer productId, boolean isInWishlist) {
-        this.id = 0;
         this.productId = productId;
         this.isInWishlist = isInWishlist;
     }

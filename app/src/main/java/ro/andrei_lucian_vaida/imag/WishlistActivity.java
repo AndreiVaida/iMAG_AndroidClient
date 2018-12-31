@@ -65,12 +65,6 @@ public class WishlistActivity extends AppCompatActivity {
         statusTextView = findViewById(R.id.statusTextView);
         queue = Volley.newRequestQueue(this);
 
-        getSharedPreferences();
-        if (userId < 0 || token.length() == 0) {
-            goToLoginActivity();
-            return;
-        }
-
         IMagDatabase = Room.databaseBuilder(getApplicationContext(),
                 IMagDatabase.class, DATABASE_NAME)
                 .fallbackToDestructiveMigration()
@@ -80,10 +74,16 @@ public class WishlistActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        getSharedPreferences();
+        if (userId < 0 || token.length() == 0) {
+            goToLoginActivity();
+            return;
+        }
+
         weAreOnline = true;
         statusTextView.setText("");
 
-        titleView.setText("Produse.");
+        titleView.setText("Wishlist");
         titleView.setTextColor(Color.rgb(0, 0, 0));
         loadWishlist(userId);
         tryToSynchronizeWithServer(0);
@@ -101,6 +101,12 @@ public class WishlistActivity extends AppCompatActivity {
                         try {
                             JSONArray jsonProducts = response.getJSONArray("productDtos");
                             productsLayout.removeAllViews();
+
+                            if (jsonProducts.length() == 0) {
+                                titleView.setText("Wishlist-ul este gol.");
+                                return;
+                            }
+                            titleView.setText("Wishlist.");
 
                             for (int i = 0; i < jsonProducts.length(); i++) {
 
@@ -127,8 +133,8 @@ public class WishlistActivity extends AppCompatActivity {
             @Override
             public void onErrorResponse(VolleyError error) {
                 weAreOnline = false;
-                titleView.setText("Conexiune eșuată.\nSe afișează produsele salvate local.");
-                titleView.setTextColor(Color.rgb(232, 73, 30));
+                statusTextView.setText("Conexiune eșuată.\nSe afișează produsele salvate local.");
+                statusTextView.setTextColor(Color.rgb(232, 73, 30));
                 loadWishlistFromLocalStorage();
             }
         }) {
@@ -153,6 +159,32 @@ public class WishlistActivity extends AppCompatActivity {
             @Override
             public void run() {
                 final List<Product> products = IMagDatabase.productDao().getAllInWishlist();
+                if (products.size() == 0) {
+                    final Handler handler = new Handler(Looper.getMainLooper());
+                    final Runnable runnable = new Runnable() {
+                        public void run() {
+                            handler.post(new Runnable() {
+                                public void run() {
+                                    titleView.setText("Wishlist-ul este gol.");
+                                }
+                            });
+                        }
+                    };
+                    return;
+                }
+                else {
+                    final Handler handler = new Handler(Looper.getMainLooper());
+                    final Runnable runnable = new Runnable() {
+                        public void run() {
+                            handler.post(new Runnable() {
+                                public void run() {
+                                    titleView.setText("Wishlist");
+                                }
+                            });
+                        }
+                    };
+                }
+
                 for (Product product : products) {
                     // create a new layout for the product
                     final LinearLayout productLayout = createNewProductLayout(product);
