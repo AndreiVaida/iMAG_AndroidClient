@@ -2,6 +2,7 @@ package ro.andrei_lucian_vaida.imag;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.EditText;
@@ -23,8 +24,13 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText emailInput;
     private EditText nameInput;
     private EditText passwordInput;
+    private static EditText datePickerInput;
     private TextView errorTextView;
     private RequestQueue queue;
+
+    public static void setDate(int year, int month, int day) {
+        datePickerInput.setText(year + "." + month + "." + day);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +41,7 @@ public class RegisterActivity extends AppCompatActivity {
         nameInput = findViewById(R.id.nameInput);
         passwordInput = findViewById(R.id.passwordInput);
         errorTextView = findViewById(R.id.errorTextView);
+        datePickerInput = findViewById(R.id.datePickerEditText);
         queue = Volley.newRequestQueue(this);
     }
 
@@ -44,6 +51,7 @@ public class RegisterActivity extends AppCompatActivity {
             body.put("email", emailInput.getText());
             body.put("name", nameInput.getText());
             body.put("password", passwordInput.getText());
+            body.put("birthDay", datePickerInput.getText());
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -60,7 +68,7 @@ public class RegisterActivity extends AppCompatActivity {
             @Override
             public void onErrorResponse(VolleyError error) {
                 final NetworkResponse response = error.networkResponse;
-                if (response.data != null) {
+                if (response != null && response.data != null) {
                     errorTextView.setText(new String(response.data));
                 }
                 else {
@@ -91,5 +99,10 @@ public class RegisterActivity extends AppCompatActivity {
     public void goToMainActivity(View view) {
         Intent intent = new Intent(this, MainActivity.class);
         startActivity(intent);
+    }
+
+    public void showTimePickerDialog(View v) {
+        DialogFragment newFragment = new DatePickerFragment();
+        newFragment.show(getSupportFragmentManager(), "datePicker");
     }
 }

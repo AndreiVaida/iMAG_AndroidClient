@@ -12,6 +12,7 @@ import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -65,7 +66,6 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
         queue = Volley.newRequestQueue(this);
         final Intent intent = getIntent();
         productId = intent.getIntExtra("productId", -1);
-        getSharedPreferences();
 
         IMagDatabase = Room.databaseBuilder(getApplicationContext(),
                 dao.IMagDatabase.class, DATABASE_NAME)
@@ -78,6 +78,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        getSharedPreferences();
         if (weAreOnline) {
             loadProductDetails(productId);
         }
@@ -187,6 +188,11 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
     }
 
     public void addToWishlist(View view) {
+        if (!isLoggedIn()) {
+            goToLoginActivity();
+            return;
+        }
+
         if(!weAreOnline) {
             addToWishlistLocalStorageAndCreateTaskToDoWhenOnline(productId);
             return;
@@ -274,5 +280,14 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
 
             }
         }).start();
+    }
+
+    private boolean isLoggedIn() {
+        return userId > 0 && token.length() > 0;
+    }
+
+    public void goToLoginActivity() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivity(intent);
     }
 }
