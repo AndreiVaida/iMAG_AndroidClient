@@ -1,18 +1,17 @@
 package ro.andrei_lucian_vaida.imag;
 
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -60,7 +59,13 @@ public class RegisterActivity extends AppCompatActivity {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                errorTextView.setText("Nu s-a creat contul. \n" + error.getMessage());
+                final NetworkResponse response = error.networkResponse;
+                if (response.data != null) {
+                    errorTextView.setText(new String(response.data));
+                }
+                else {
+                    errorTextView.setText("A apărut o eroare.");
+                }
             }
         }) {
             // save body

@@ -14,9 +14,9 @@ import android.os.Bundle;
 import android.util.Base64;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.volley.NetworkResponse;
 import com.android.volley.NoConnectionError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -31,10 +31,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import dao.IMagDatabase;
 import domain.Product;
 import domain.TaskToDoWhenOnline;
 
@@ -103,6 +101,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
                         final Product product = jsonToProduct(jsonProduct);
                         if (product != null) {
                             populateView(product);
+                            saveProductInLocalStorage(product);
                         }
                         else {
                             productNameView.setText("Produsul nu este valid.");
@@ -122,6 +121,16 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
             }
         });
         queue.add(jsonObjectRequest);
+    }
+
+    private void saveProductInLocalStorage(final Product product) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IMagDatabase.productDao().save(product);
+
+            }
+        }).start();
     }
 
     private Product jsonToProduct(final JSONObject jsonProduct) {
@@ -179,7 +188,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
 
     public void addToWishlist(View view) {
         if(!weAreOnline) {
-            addToWishlistLocalStorage(productId);
+            addToWishlistLocalStorageAndCreateTaskToDoWhenOnline(productId);
             return;
         }
 
@@ -191,14 +200,26 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
                     public void onResponse(String response) {
                         addToWishlistTextView.setText("Adăugat\nîn wishlist !");
                         addToWishlistTextView.setTextColor(Color.rgb(37, 178, 41));
+                        addToWishlistLocalStorage(productId);
                     }
                 }, new Response.ErrorListener() {
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                addToWishlistTextView.setText("Nu a fost adăugat\nîn wishlist.");
-                addToWishlistTextView.setTextColor(Color.rgb(232, 73, 30));
-                error.printStackTrace();
+                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                    addToWishlistTextView.setText("Produsul va fi adăugat\ndupă restabilirea conexiunii.");
+                    addToWishlistTextView.setTextColor(Color.rgb(208, 219, 61));
+                    addToWishlistLocalStorageAndCreateTaskToDoWhenOnline(productId);
+                }
+                else {
+                    final NetworkResponse response = error.networkResponse;
+                    if (response.data != null) {
+                        addToWishlistTextView.setText(new String(response.data));
+                    } else {
+                        addToWishlistTextView.setText("Nu a fost adăugat\nîn wishlist.");
+                    }
+                    addToWishlistTextView.setTextColor(Color.rgb(232, 73, 30));
+                }
             }
         }) {
             // save header
@@ -215,7 +236,7 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
         queue.add(stringRequest);
     }
 
-    private void addToWishlistLocalStorage(final Integer productId) {
+    private void addToWishlistLocalStorageAndCreateTaskToDoWhenOnline(final Integer productId) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -238,6 +259,18 @@ public class ShowProductDetailsActivity extends AppCompatActivity {
                     }
                 };
                 new Thread(runnable).start();
+
+            }
+        }).start();
+    }
+
+    private void addToWishlistLocalStorage(final Integer productId) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final Product product = IMagDatabase.productDao().getById(productId);
+                product.setInWishlist(true);
+                IMagDatabase.productDao().save(product);
 
             }
         }).start();

@@ -17,6 +17,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.volley.NetworkResponse;
 import com.android.volley.NoConnectionError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -74,18 +75,18 @@ public class WishlistActivity extends AppCompatActivity {
                 IMagDatabase.class, DATABASE_NAME)
                 .fallbackToDestructiveMigration()
                 .build();
-
-        weAreOnline = true;
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        weAreOnline = true;
         statusTextView.setText("");
 
-        if (weAreOnline) {
-            loadWishlist(userId);
-        }
+        titleView.setText("Produse.");
+        titleView.setTextColor(Color.rgb(0, 0, 0));
+        loadWishlist(userId);
+        tryToSynchronizeWithServer(0);
     }
 
     private void loadWishlist(final Integer userId) {
@@ -248,6 +249,7 @@ public class WishlistActivity extends AppCompatActivity {
 
                     @Override
                     public void onResponse(String response) {
+                        weAreOnline = true;
                         statusTextView.setText("Produsul a fost eliminat din wishlist.");
                         statusTextView.setTextColor(Color.rgb(37, 178, 41));
 
@@ -260,19 +262,25 @@ public class WishlistActivity extends AppCompatActivity {
 
             @Override
             public void onErrorResponse(VolleyError error) {
-                if (error instanceof TimeoutError  || error instanceof NoConnectionError) {
+                if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                    weAreOnline = false;
                     statusTextView.setText("Produsul va fi șters complet după restabilirea conexiunii.");
                     statusTextView.setTextColor(Color.rgb(208, 219, 61));
                     removeProductFromWishlistOffline(product);
-                }
-                else {
-                    statusTextView.setText("Produsul nu a putut fi eliminat din wishlist.");
+                } else {
+                    final NetworkResponse response = error.networkResponse;
+                    if (response.data != null) {
+                        statusTextView.setText(new String(response.data));
+                    }
+                    else {
+                        statusTextView.setText("Produsul nu a putut fi eliminat din wishlist.");
+                    }
                     statusTextView.setTextColor(Color.rgb(232, 73, 30));
                     error.printStackTrace();
                 }
             }
         }) {
-            // save header
+            // add header
             @Override
             public Map<String, String> getHeaders() {
                 final HashMap<String, String> headers = new HashMap<>();
@@ -353,6 +361,92 @@ public class WishlistActivity extends AppCompatActivity {
             @Override
             public void run() {
                 IMagDatabase.productDao().save(product);
+            }
+        }).start();
+    }
+
+    /**
+     * Trying to send to server the first task from local storage (if DB is not empty), after nrOfSecondsToWait seconds.
+     * If succeeds: remove the task from local storage and try to send the next one
+     * If fails: try again after nrOfSecondsToWait seconds
+     * Info: Updates weAreOnline variable.
+     */
+    private void tryToSynchronizeWithServer(final int nrOfSecondsToWait) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(nrOfSecondsToWait * 1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                final List<TaskToDoWhenOnline> taskToDoWhenOnlineList = IMagDatabase.taskToDoWhenOnlineDao().getAll();
+                if (taskToDoWhenOnlineList.size() > 0) {
+                    final TaskToDoWhenOnline task = taskToDoWhenOnlineList.get(0);
+                    System.out.println(" -> Task to do: " + taskToDoWhenOnlineList.size() + ".\n -> Try to synchronize product " + task.getProductId() + " " + task.isInWishlist() + ".");
+                    final int method;
+                    if (task.isInWishlist()) {
+                        method = Request.Method.POST;
+                    } else {
+                        method = Request.Method.DELETE;
+                    }
+
+                    final StringRequest stringRequest = new StringRequest(method,
+                            MainActivity.serverUrl + wishlistUrl,
+                            new Response.Listener<String>() {
+
+                                @Override
+                                public void onResponse(String response) {
+                                    weAreOnline = true;
+                                    removeTaskFromLocalStorage(task);
+                                    if (taskToDoWhenOnlineList.size() == 1) {
+                                        loadWishlist(userId);
+                                    } else {
+                                        tryToSynchronizeWithServer(0);
+                                    }
+                                }
+                            }, new Response.ErrorListener() {
+
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                                // cannot connect to server
+                                weAreOnline = false;
+                                tryToSynchronizeWithServer(10);
+                            } else {
+                                final NetworkResponse response = error.networkResponse;
+                                if (response.data != null) {
+                                    statusTextView.setText(new String(response.data));
+                                }
+                                // server replayed with an error
+                                removeTaskFromLocalStorage(task);
+                                tryToSynchronizeWithServer(0);
+                            }
+                        }
+                    }) {
+                        // add header
+                        @Override
+                        public Map<String, String> getHeaders() {
+                            final HashMap<String, String> headers = new HashMap<>();
+                            //headers.put("Content-Type", "application/json");
+                            headers.put("userId", userId.toString());
+                            headers.put("productId", task.getProductId().toString());
+                            headers.put("token", token);
+                            return headers;
+                        }
+                    };
+                    queue.add(stringRequest);
+                }
+            }
+        }).start();
+    }
+
+    private void removeTaskFromLocalStorage(final TaskToDoWhenOnline taskToDoWhenOnline) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                IMagDatabase.taskToDoWhenOnlineDao().delete(taskToDoWhenOnline);
             }
         }).start();
     }
