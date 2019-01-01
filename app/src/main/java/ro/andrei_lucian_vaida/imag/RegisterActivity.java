@@ -19,7 +19,7 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends AppCompatActivity implements DatePickerInterface {
     private final String userUrl = "/user";
     private EditText emailInput;
     private EditText nameInput;
@@ -28,7 +28,8 @@ public class RegisterActivity extends AppCompatActivity {
     private TextView errorTextView;
     private RequestQueue queue;
 
-    public static void setDate(int year, int month, int day) {
+    @Override
+    public void setDate(int year, int month, int day) {
         datePickerInput.setText(year + "." + month + "." + day);
     }
 
