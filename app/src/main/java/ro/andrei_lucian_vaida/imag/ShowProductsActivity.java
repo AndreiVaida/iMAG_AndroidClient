@@ -13,6 +13,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -46,6 +47,7 @@ public class ShowProductsActivity extends AppCompatActivity {
     private Integer totalPages;
     private Integer itemsPerPage;
     private boolean productsAreLoaded;
+    private ProgressBar loadingBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +57,7 @@ public class ShowProductsActivity extends AppCompatActivity {
         title = findViewById(R.id.title);
         productsScrollView = findViewById(R.id.productsScrollView);
         productsLayout = findViewById(R.id.productsLayout);
+        loadingBar = findViewById(R.id.loadingBar);
         productsLayout.removeAllViews();
         queue = Volley.newRequestQueue(this);
         pageNumber = 1;
@@ -136,6 +139,7 @@ public class ShowProductsActivity extends AppCompatActivity {
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
+                        loadingBar.setVisibility(View.GONE);
                     }
                 }, new Response.ErrorListener() {
 
@@ -207,6 +211,18 @@ public class ShowProductsActivity extends AppCompatActivity {
                     };
                     new Thread(runnable).start();
                 }
+                // close loading bar
+                final Handler handler = new Handler(Looper.getMainLooper());
+                final Runnable runnable = new Runnable() {
+                    public void run() {
+                        handler.post(new Runnable() {
+                            public void run() {
+                                loadingBar.setVisibility(View.GONE);
+                            }
+                        });
+                    }
+                };
+                new Thread(runnable).start();
             }
         }).start();
     }
