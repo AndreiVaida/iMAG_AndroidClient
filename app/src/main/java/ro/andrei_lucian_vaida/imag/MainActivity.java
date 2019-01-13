@@ -108,4 +108,9 @@ public class MainActivity extends AppCompatActivity {
         userId = prefs.getInt("userId", -1);
         token = prefs.getString("token", "");
     }
+
+    public void goToContactActivity(View view) {
+        Intent intent = new Intent(this, SendEmailActivity.class);
+        startActivity(intent);
+    }
 }

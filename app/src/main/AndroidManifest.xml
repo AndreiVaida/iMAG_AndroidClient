@@ -28,7 +28,8 @@
         <activity android:name=".ShowProductDetailsActivity" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".WishlistActivity" />
-        <activity android:name=".RegisterActivity"></activity>
+        <activity android:name=".RegisterActivity" />
+        <activity android:name=".SendEmailActivity"></activity>
     </application>
 
 </manifest>
